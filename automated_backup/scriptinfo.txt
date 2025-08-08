@@ -1,0 +1,15 @@
+This script automates the process of system data collection.
+
+This script collect data every minute using crontab
+
+It captures important metrics or file contents from the source server.
+
+The collected data is compressed using gzip to reduce transfer size.
+
+Secure file transfer is handled using rsync over SSH with key-based authentication.
+
+All transferred data is stored in a designated backup directory on the remote server.
+
+This setup ensures consistent backups and supports centralized data monitoring.
+
+The script is designed for reliability, automation, and ease of maintenance
