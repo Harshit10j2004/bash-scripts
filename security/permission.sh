@@ -44,42 +44,64 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
 
         while true; do
 
+
+            sleep 5
+
             newresponse=$(getupdate)
-            newupdateid=$(echo "$response" | jq -r '.result[-1].update_id')
-
-            while read -r; do
-
-
-                username_text=$(echo "$newresponse" | jq -r '.result[-1].message.text')
-
-                user=$(grep -w "${username_text}" "${file}" | awk '{print $1}')
-
-                if [ "$username_text" == "$user" ]; then
-
-
-
-                    if [ $newupdateid != $updateid ]; then
-
-
-                        updateid=$newupdateid
-
-                        sendmessage "Got username send ssh key"
-                        echo " checkpoint 1"
+            newupdateid=$(echo "$newresponse" | jq -r '.result[-1].update_id')
 
 
 
 
-                    else
-                            sendmessage "Wrong username or user is not in system"
-                            echo " checkpoint 1:1"
+            username_text=$(echo "$newresponse" | jq -r '.result[-1].message.text')
 
-                    fi
+            user=$(grep -w "${username_text}" "${file}" | awk '{print $1}')
+
+
+
+            if [ "$username_text" == "$user" ]; then
+
+
+
+                if [ $newupdateid != $updateid ]; then
+
+
+                    updateid=$newupdateid
+
+                    sendmessage "Got username send ssh key"
+                    echo " checkpoint 1"
+
+                    while true; do
+
+                            sleep 5
+
+                            newres=$(getupdate)
+                            newupid=$(echo "$newres" | jq -r '.result[-1].message.text')
+
+                            sendmessage " key is $newupid "
+                            echo "hitpoint x"
+
+                            sleep 5
+                    done
+
+
 
                 fi
 
-                    sleep 7
 
-            done < "${file}"
+
+            else
+
+                    sendmessage "Wrong username or user is not in system send again"
+                    echo " checkpoint 1:1"
+
+
+
+            fi
+
+
+            sleep 10
+
 
 
         done
@@ -90,3 +112,5 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
     fi
     echo " data send "
 fi
+
+
