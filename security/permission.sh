@@ -2,7 +2,6 @@
 set -x
 file="/home/ubuntu/data/details.txt"
 
-token="8407099698:AAFN8if_v76b4DwSCxrRMDcn_hRMSueWI0U"
 
 sendmessage() {
 
