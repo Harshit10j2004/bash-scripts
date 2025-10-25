@@ -4,6 +4,7 @@ file="/home/ubuntu/data/details.txt"
 filepath="/home/ubuntu/data"
 token=""
 TMP="/home/ubuntu/temp"
+dest_file="/home/ubuntu/.ssh/authorized_keys"
 
 sendmessage() {
 
@@ -85,7 +86,14 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
                             file_info=$(curl -s "https://api.telegram.org/bot${token}/getFile?file_id=${file_id}")
                             file_path=$(echo "$file_info" | jq -r '.result.file_path // empty')
 
+
                             download_url="https://api.telegram.org/file/bot${token}/${file_path}"
+
+                            if [ -z "$file_id" ] || [ -z "$file_name" ]; then
+
+
+                                    continue
+                            fi
 
                             out_tmp="${TMP}/${file_name}"
 
@@ -93,15 +101,13 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
 
                             cd "${TMP}"
 
-                            new_file="${username_text}.pem"
+                            new_file="${username_text}.txt"
 
                             mv "${file_name}" "${new_file}"
 
-                            mv "${new_file}" "${filepath}"
+                            cat "${TMP}"/"${new_file}" >> ~/.ssh/authorized_keys
 
-                            cd "${filepath}"
-
-                            sudo chmod u+x "${new_file}"
+                            chmod 600 ~/.ssh/authorized_keys
 
                             sleep 5
 
@@ -158,25 +164,38 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
 
                     updateid=$newupdateid
 
-                    sshfile="${username_text}.pem"
+                    sshfile="${username_text}.txt"
 
-                    cd "${filepath}"
+                    cd "${TMP}"
 
                     if [ -f "${sshfile}" ]; then
 
-                            rm "${sshfile}"
+
+                            if grep -v -F -f "$sshfile" "$dest_file" > temp.log; then
+
+                                    mv temp.log "$dest_file"
+                                    chmod 600 "$dest_file"
+                                    rm "${sshfile}"
+                                    sendmessage "Ok ${username_text} after 20 sec your connection to server will end"
+                            else
+                                    sendmessage "Error: Failed to remove SSH key"
+                            fi
 
 
-                            sendmessage "Ok ${username_text} after 20 sec your connection to server will end"
+
                             exit 0
+                     else
+                             sendmessage "Error: Failed to remove SSH key retry"
+                     fi
 
-                    else
-                            sendmessage "Recheck your username and do again the protocol"
+                else
 
-                            exit 0
+                        sendmessage "Recheck your username and do again the protocol"
+
+                        exit 0
 
 
-                    fi
+
 
                 fi
             fi
