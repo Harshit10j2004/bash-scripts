@@ -1,10 +1,7 @@
 #!/bin/bash
 set -x
-file="/home/ubuntu/data/details.txt"
-filepath="/home/ubuntu/data"
-token=""
-TMP="/home/ubuntu/temp"
-dest_file="/home/ubuntu/.ssh/authorized_keys"
+
+source /home/ubuntu/data/perdata.env
 
 sendmessage() {
 
@@ -22,7 +19,7 @@ getupdate(){
 }
 
 response=$(getupdate)
-message_text=$(echo "$response" | jq -r '.result[-1].message.text')
+message_text=$(echo "$response" | jq -r '.result[-1].message.text' | tr '[:upper:]' '[:lower:]')
 chatid=$(echo "$response" | jq -r '.result[-1].message.chat.id')
 updateid=$(echo "$response" | jq -r '.result[-1].update_id')
 
@@ -42,7 +39,7 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
 
         message="Login command received. Send username ..."
         sendmessage "$message"
-        echo "Login data sent"
+
 
         while true; do
 
@@ -55,10 +52,16 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
 
 
 
-            username_text=$(echo "$newresponse" | jq -r '.result[-1].message.text')
+            username_text=$(echo "$newresponse" | jq -r '.result[-1].message.text' | tr '[:upper:]' '[:lower:]')
 
-            user=$(grep -w "${username_text}" "${file}" | awk '{print $1}')
+            user=$(grep -w "${username_text}" "$file" | awk '{print $1}')
 
+            if [ "$username_text" == "login" ] || [ "$username_text" == "logout" ];then
+
+                    sendmessage "waiting for username, please send username"
+
+                    sleep 5
+            fi
 
 
             if [ "$username_text" == "$user" ]; then
@@ -70,8 +73,10 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
 
                     updateid=$newupdateid
 
+                    echo "user $username_text tried to login to server at $(date)" >> $log
+
                     sendmessage "Got username send ssh key"
-                    echo " checkpoint 1"
+
 
                     while true; do
 
@@ -87,7 +92,7 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
                             file_path=$(echo "$file_info" | jq -r '.result.file_path // empty')
 
 
-                            download_url="https://api.telegram.org/file/bot${token}/${file_path}"
+                            download_url="https://api.telegram.org/file/bot$token/$file_path"
 
                             if [ -z "$file_id" ] || [ -z "$file_name" ]; then
 
@@ -95,23 +100,32 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
                                     continue
                             fi
 
-                            out_tmp="${TMP}/${file_name}"
+                            if [[ "$file_name" != *.pem && "$file_name" != *.txt ]];then
+
+                                    sendmessage "Only txt and pem format file is allowed , please redo the whole protocol again"
+                                    echo "user $username_text tried to send file in the format which are not allowed , file name is $file_name at $(date)" >> $log
+
+                                    exit 0
+                            fi
+
+                            out_tmp="$TMP/$file_name"
 
                             curl -s -o "$out_tmp" "$download_url"
 
-                            cd "${TMP}"
+                            cd "$TMP"
 
                             new_file="${username_text}.txt"
 
                             mv "${file_name}" "${new_file}"
 
-                            cat "${TMP}"/"${new_file}" >> ~/.ssh/authorized_keys
+                            cat "$TMP"/"${new_file}" >> ~/.ssh/authorized_keys
 
                             chmod 600 ~/.ssh/authorized_keys
 
                             sleep 5
 
                             sendmessage " Under 15 sec you can enter to server "
+                            echo "user $username_text sucessfully login to server at $(date)" >> $log
                             exit 0
                     done
 
@@ -139,7 +153,7 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
     elif [ "$message_text" == "logout" ]; then
         message="logout command received, enter your username"
         sendmessage "$message"
-        echo "logout"
+
 
          while true; do
 
@@ -150,7 +164,7 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
             newupdateid=$(echo "$newresponse" | jq -r '.result[-1].update_id')
 
 
-            username_text=$(echo "$newresponse" | jq -r '.result[-1].message.text')
+            username_text=$(echo "$newresponse" | jq -r '.result[-1].message.text' | tr '[:upper:]' '[:lower:]')
 
             user=$(grep -w "${username_text}" "${file}" | awk '{print $1}')
 
@@ -166,9 +180,9 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
 
                     sshfile="${username_text}.txt"
 
-                    cd "${TMP}"
+                    cd "$TMP"
 
-                    if [ -f "${sshfile}" ]; then
+                    if [ -f "$sshfile" ]; then
 
 
                             if grep -v -F -f "$sshfile" "$dest_file" > temp.log; then
@@ -176,6 +190,7 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
                                     mv temp.log "$dest_file"
                                     chmod 600 "$dest_file"
                                     rm "${sshfile}"
+                                    echo "user $username_text logout from server at $(date)" >> $log
                                     sendmessage "Ok ${username_text} after 20 sec your connection to server will end"
                             else
                                     sendmessage "Error: Failed to remove SSH key"
@@ -202,7 +217,10 @@ if [ "$message_text" != "null" ] && [ "$chatid" != "null" ]; then
          done
 
 
-
+    else
+            sendmessage "Wrong command send command login/logout for further process"
     fi
     echo " data send "
 fi
+
+
